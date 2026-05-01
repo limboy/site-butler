@@ -1,4 +1,4 @@
-import { getSettings, getTemporaryAllows } from "@/lib/storage";
+import { getSettings } from "@/lib/storage";
 import {
   syncBlockingRules,
   temporarilyAllowSite,
@@ -9,6 +9,7 @@ import {
 import type { Message } from "@/types";
 
 const pendingUrls = new Map<number, string>();
+const allowedTabs = new Set<number>();
 
 chrome.runtime.onInstalled.addListener(async () => {
   const settings = await getSettings();
@@ -47,11 +48,7 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
     const matched = settings.blockedSites.find((s) => hostname.endsWith(s.hostname));
     if (!matched) return;
 
-    const allows = await getTemporaryAllows();
-    const isAllowed = allows.some(
-      (a) => a.hostname === matched.hostname && a.tabId === details.tabId && a.expiresAt > Date.now()
-    );
-    if (isAllowed) return;
+    if (allowedTabs.has(details.tabId)) return;
 
     const blockedUrl = chrome.runtime.getURL(
       `/src/blocked/index.html?host=${encodeURIComponent(matched.hostname)}`
@@ -63,9 +60,10 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 chrome.runtime.onMessage.addListener(
   (message: Message, _sender, sendResponse) => {
     if (message.type === "TEMPORARILY_ALLOW") {
-      temporarilyAllowSite(message.hostname, message.tabId).then(() =>
-        sendResponse({ success: true })
-      );
+      temporarilyAllowSite(message.hostname, message.tabId).then(() => {
+        allowedTabs.add(message.tabId);
+        sendResponse({ success: true });
+      });
       return true;
     }
     if (message.type === "SYNC_RULES") {
@@ -85,6 +83,7 @@ chrome.runtime.onMessage.addListener(
 chrome.tabs.onRemoved.addListener((tabId) => {
   removeAllowRulesForTab(tabId);
   pendingUrls.delete(tabId);
+  allowedTabs.delete(tabId);
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
