@@ -1,0 +1,6 @@
+export const BLOCKING_RULE_ID_BASE = 1000;
+export const ALLOW_RULE_ID_BASE = 2000;
+export const DEFAULT_BREATH_COUNT = 3;
+export const TEMPORARY_ALLOW_DURATION_MS = 5 * 60 * 1000;
+export const BREATH_DURATION_MS = 8000;
+export const INHALE_DURATION_MS = 4000;

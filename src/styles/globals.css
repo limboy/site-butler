@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: oklch(1 0 0);
+  --color-foreground: oklch(0.145 0 0);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.145 0 0);
+  --color-primary: oklch(0.55 0.15 195);
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: oklch(0.965 0.001 286);
+  --color-secondary-foreground: oklch(0.205 0 0);
+  --color-muted: oklch(0.965 0.001 286);
+  --color-muted-foreground: oklch(0.45 0 0);
+  --color-accent: oklch(0.965 0.001 286);
+  --color-accent-foreground: oklch(0.205 0 0);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.577 0.245 27.325);
+  --color-border: oklch(0.922 0 0);
+  --color-input: oklch(0.922 0 0);
+  --color-ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+
+  --color-breath-1: oklch(0.65 0.15 195);
+  --color-breath-2: oklch(0.6 0.12 210);
+  --color-breath-3: oklch(0.55 0.18 180);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@keyframes breathe-expand {
+  0%,
+  100% {
+    transform: scale(0.6);
+  }
+  50% {
+    transform: scale(1);
+  }
+}
+
+@keyframes breathe-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 30px 5px oklch(0.65 0.15 195 / 0.15);
+  }
+  50% {
+    box-shadow: 0 0 60px 20px oklch(0.65 0.15 195 / 0.3);
+  }
+}
+
+.animate-breathe {
+  animation:
+    breathe-expand 8s ease-in-out infinite,
+    breathe-glow 8s ease-in-out infinite;
+}
+
+.animate-breathe-glow {
+  animation: pulse-ring 8s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
