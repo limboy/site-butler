@@ -1,4 +1,4 @@
-import { getSettings } from "@/lib/storage";
+import { getSettings, getTemporaryAllows } from "@/lib/storage";
 import {
   syncBlockingRules,
   temporarilyAllowSite,
@@ -32,6 +32,31 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     if (settings.blockedSites.some((s) => hostname.endsWith(s.hostname))) {
       pendingUrls.set(details.tabId, url);
     }
+  } catch {}
+});
+
+// Fallback: catch blocked sites that bypassed declarativeNetRequest (e.g. served by service worker cache)
+chrome.webNavigation.onCommitted.addListener(async (details) => {
+  if (details.frameId !== 0) return;
+  const url = details.url;
+  if (url.startsWith("chrome") || url.startsWith("about") || url.startsWith("chrome-extension")) return;
+
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "");
+    const settings = await getSettings();
+    const matched = settings.blockedSites.find((s) => hostname.endsWith(s.hostname));
+    if (!matched) return;
+
+    const allows = await getTemporaryAllows();
+    const isAllowed = allows.some(
+      (a) => a.hostname === matched.hostname && a.tabId === details.tabId && a.expiresAt > Date.now()
+    );
+    if (isAllowed) return;
+
+    const blockedUrl = chrome.runtime.getURL(
+      `/src/blocked/index.html?host=${encodeURIComponent(matched.hostname)}`
+    );
+    chrome.tabs.update(details.tabId, { url: blockedUrl });
   } catch {}
 });
 
