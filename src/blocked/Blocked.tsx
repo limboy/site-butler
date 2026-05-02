@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Wind, ArrowRight, X } from "lucide-react";
 import { useBreathingExercise } from "@/hooks/useBreathingExercise";
 import { DEFAULT_BREATH_COUNT } from "@/lib/constants";
+import { recordBlockEvent, updateBlockEventDecision } from "@/lib/storage";
 
 type Stage = "intro" | "breathing" | "decision";
 
@@ -19,6 +20,7 @@ export function Blocked() {
   const [stage, setStage] = useState<Stage>("intro");
   const [breathCount, setBreathCount] = useState(DEFAULT_BREATH_COUNT);
   const [originalUrl, setOriginalUrl] = useState<string | null>(null);
+  const eventIdRef = useRef<string | null>(null);
 
   const params = new URLSearchParams(window.location.search);
   const hostname = params.get("host") ?? "this site";
@@ -40,6 +42,10 @@ export function Blocked() {
         );
       }
     });
+
+    recordBlockEvent(hostname).then((id) => {
+      eventIdRef.current = id;
+    });
   }, []);
 
   useEffect(() => {
@@ -56,6 +62,9 @@ export function Blocked() {
   const handleYes = async () => {
     const tab = await chrome.tabs.getCurrent();
     if (!tab?.id) return;
+    if (eventIdRef.current) {
+      await updateBlockEventDecision(eventIdRef.current, "yes");
+    }
     await chrome.runtime.sendMessage({
       type: "TEMPORARILY_ALLOW",
       hostname,
@@ -67,9 +76,11 @@ export function Blocked() {
 
   const handleNo = async () => {
     const tab = await chrome.tabs.getCurrent();
-    if (tab?.id) {
-      chrome.tabs.update(tab.id, { url: "chrome://newtab" });
+    if (!tab?.id) return;
+    if (eventIdRef.current) {
+      await updateBlockEventDecision(eventIdRef.current, "no");
     }
+    chrome.tabs.update(tab.id, { url: "chrome://newtab" });
   };
 
   return (

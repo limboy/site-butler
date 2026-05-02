@@ -20,3 +20,10 @@ export interface TemporaryAllow {
   tabId: number;
   expiresAt: number;
 }
+
+export interface BlockEvent {
+  id: string;
+  hostname: string;
+  timestamp: number;
+  decision: "yes" | "no" | "viewed";
+}

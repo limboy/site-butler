@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Plus, Trash2, Wind, ShieldBan } from "lucide-react";
+import { Plus, Trash2, Wind, ShieldBan, BarChart2, Settings } from "lucide-react";
 import { useStorage } from "@/hooks/useStorage";
 import type { BlockedSite } from "@/types";
+import { Statistics } from "./Statistics";
 
 export function Options() {
+  const [activeTab, setActiveTab] = useState<"settings" | "statistics">(
+    "settings"
+  );
   const [blockedSites, setBlockedSites] = useStorage<BlockedSite[]>(
     "blockedSites",
     []
@@ -36,10 +40,40 @@ export function Options() {
       <div className="max-w-lg mx-auto py-12 px-4">
         <div className="flex items-center gap-3 mb-8">
           <ShieldBan className="w-7 h-7 text-primary" />
-          <h1 className="text-2xl font-semibold">Site Butler Settings</h1>
+          <h1 className="text-2xl font-semibold">Site Butler</h1>
         </div>
 
-        <section className="mb-8">
+        {/* Tab switcher */}
+        <div className="flex gap-1 p-1 rounded-lg bg-secondary/60 mb-8">
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === "settings"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Settings
+          </button>
+          <button
+            onClick={() => setActiveTab("statistics")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === "statistics"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BarChart2 className="w-4 h-4" />
+            Statistics
+          </button>
+        </div>
+
+        {activeTab === "statistics" && <Statistics />}
+
+        {activeTab === "settings" && (
+          <>
+          <section className="mb-8">
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">
             Blocked Sites
           </h2>
@@ -118,6 +152,8 @@ export function Options() {
             </div>
           </div>
         </section>
+        </>
+        )}
       </div>
     </div>
   );
