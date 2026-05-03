@@ -60,10 +60,12 @@ chrome.webNavigation.onCommitted.addListener(async (details) => {
 chrome.runtime.onMessage.addListener(
   (message: Message, _sender, sendResponse) => {
     if (message.type === "TEMPORARILY_ALLOW") {
-      temporarilyAllowSite(message.hostname, message.tabId).then(() => {
-        allowedTabs.add(message.tabId);
-        sendResponse({ success: true });
-      });
+      temporarilyAllowSite(message.hostname, message.tabId)
+        .then(() => {
+          allowedTabs.add(message.tabId);
+          sendResponse({ success: true });
+        })
+        .catch(() => sendResponse({ success: false }));
       return true;
     }
     if (message.type === "SYNC_RULES") {

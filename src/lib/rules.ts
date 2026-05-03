@@ -49,12 +49,19 @@ export async function temporarilyAllowSite(
   hostname: string,
   tabId: number
 ): Promise<void> {
-  const allows = await getTemporaryAllows();
-  const ruleId =
-    ALLOW_RULE_ID_BASE +
-    (allows.length > 0
-      ? Math.max(...allows.map((a) => a.ruleId - ALLOW_RULE_ID_BASE)) + 1
-      : 0);
+  const [allows, existingSessionRules] = await Promise.all([
+    getTemporaryAllows(),
+    chrome.declarativeNetRequest.getSessionRules(),
+  ]);
+  const existingIds = new Set(existingSessionRules.map((r) => r.id));
+  let ruleId = ALLOW_RULE_ID_BASE;
+  if (allows.length > 0) {
+    ruleId =
+      ALLOW_RULE_ID_BASE +
+      Math.max(...allows.map((a) => a.ruleId - ALLOW_RULE_ID_BASE)) +
+      1;
+  }
+  while (existingIds.has(ruleId)) ruleId++;
 
   await chrome.declarativeNetRequest.updateSessionRules({
     addRules: [
@@ -87,34 +94,49 @@ export async function temporarilyAllowSite(
 export async function removeAllowRulesForTab(
   tabId: number
 ): Promise<void> {
-  const allows = await getTemporaryAllows();
+  const [allows, existingRules] = await Promise.all([
+    getTemporaryAllows(),
+    chrome.declarativeNetRequest.getSessionRules(),
+  ]);
   const toRemove = allows.filter((a) => a.tabId === tabId);
   if (toRemove.length === 0) return;
 
-  await chrome.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: toRemove.map((a) => a.ruleId),
-  });
+  const existingIds = new Set(existingRules.map((r) => r.id));
+  const idsToRemove = toRemove.map((a) => a.ruleId).filter((id) => existingIds.has(id));
+  if (idsToRemove.length > 0) {
+    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: idsToRemove });
+  }
   await setTemporaryAllows(allows.filter((a) => a.tabId !== tabId));
 }
 
 export async function cleanupExpiredAllows(): Promise<void> {
-  const allows = await getTemporaryAllows();
+  const [allows, existingRules] = await Promise.all([
+    getTemporaryAllows(),
+    chrome.declarativeNetRequest.getSessionRules(),
+  ]);
   const now = Date.now();
   const expired = allows.filter((a) => a.expiresAt <= now);
   if (expired.length === 0) return;
 
-  await chrome.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: expired.map((a) => a.ruleId),
-  });
+  const existingIds = new Set(existingRules.map((r) => r.id));
+  const idsToRemove = expired.map((a) => a.ruleId).filter((id) => existingIds.has(id));
+  if (idsToRemove.length > 0) {
+    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: idsToRemove });
+  }
   await setTemporaryAllows(allows.filter((a) => a.expiresAt > now));
 }
 
 export async function clearAllTemporaryAllows(): Promise<void> {
-  const allows = await getTemporaryAllows();
+  const [allows, existingRules] = await Promise.all([
+    getTemporaryAllows(),
+    chrome.declarativeNetRequest.getSessionRules(),
+  ]);
   if (allows.length === 0) return;
 
-  await chrome.declarativeNetRequest.updateSessionRules({
-    removeRuleIds: allows.map((a) => a.ruleId),
-  });
+  const existingIds = new Set(existingRules.map((r) => r.id));
+  const idsToRemove = allows.map((a) => a.ruleId).filter((id) => existingIds.has(id));
+  if (idsToRemove.length > 0) {
+    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: idsToRemove });
+  }
   await setTemporaryAllows([]);
 }
